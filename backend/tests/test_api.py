@@ -56,3 +56,11 @@ def test_comparison_experiment_and_nash(client):
     assert client.post('/api/game/bayesian', json={'rounds': 1}).json()['config']['game_type'] == 'bayesian'
     assert client.post('/api/game/repeated', json={'rounds': 1}).json()['config']['game_type'] == 'repeated'
     assert len(client.get('/api/scenarios').json()) == 8
+
+
+def test_nonfinite_and_malformed_inputs_return_validation_errors(client):
+    response = client.post('/api/simulations/run', content='{"demand_mean":1e309}', headers={'Content-Type': 'application/json'})
+    assert response.status_code == 422
+    assert 'finite' in response.json()['detail'][0]['msg']
+    assert client.post('/api/game/nash', content='{"payoff_matrix":[[[1e309,0]]]}', headers={'Content-Type': 'application/json'}).status_code == 422
+    assert client.post('/api/simulations/run', content='broken', headers={'Content-Type': 'application/json'}).status_code == 422

@@ -268,7 +268,7 @@ function App() {
             )
           ) : (
             <>
-              {page === "home" && <HomePage demo={demo} busy={busy} />}
+              {page === "home" && <HomePage demo={demo} busy={busy} selectBaseline={() => setConfig(c => ({...c, game_type: 'baseline'}))} />}
               {page === "simulation" && (
                 <Setup
                   {...{ config, setConfig, defaults, products, run, busy }}
@@ -398,7 +398,7 @@ function App() {
   );
 }
 
-function HomePage({ demo, busy }) {
+function HomePage({ demo, busy, selectBaseline }) {
   return (
     <>
       <section className="hero">
@@ -524,7 +524,7 @@ function HomePage({ demo, busy }) {
             "Learning from evidence",
           ],
         ].map(([n, title, text, page, tag]) => (
-          <a href={`#${page}`} className="model-card" key={n}>
+          <a href={`#${page}`} className="model-card" key={n} onClick={n === '01' ? selectBaseline : undefined}>
             <div>
               <span className="model-index">{n}</span>
               <ArrowRight size={19} />

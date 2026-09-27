@@ -1,9 +1,13 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
 from .api import router
@@ -22,6 +26,20 @@ app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http
 app.include_router(router)
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    # Do not echo invalid inputs such as Infinity back into a JSON response.
+    return JSONResponse(status_code=422, content={'detail': [
+        {key: error[key] for key in ('loc', 'msg', 'type')} for error in exc.errors()
+    ]})
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# A built frontend can be served by the same process for an offline classroom demo.
+frontend_dist = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
+if frontend_dist.is_dir():
+    app.mount('/', StaticFiles(directory=frontend_dist, html=True), name='frontend')

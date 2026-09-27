@@ -98,8 +98,8 @@ def simulate(config: Config, *, log_run: bool = True) -> dict:
     total_demand = sum(row['demand'] for row in rows)
     fulfilled = sum(row['fulfilled'] for row in rows)
     average_inventory = float(np.mean([row['total_inventory'] for row in rows]))
-    # Inventory turnover compares monetary COGS with average inventory at the same acquisition costs.
-    average_value = float(np.mean([sum((row[name]['beginning_inventory'] + row[name]['inventory']) / 2 * player.cost for name, player in zip(NAMES, players)) for row in rows]))
+    # Consolidated COGS and all stages of inventory use production cost, eliminating transfer markups.
+    average_value = float(np.mean([sum((row[name]['beginning_inventory'] + row[name]['inventory']) / 2 for name in NAMES) * config.production_cost for row in rows]))
     costs = {key: sum(row[name][key] for row in rows for name in NAMES) for key in ['holding_cost', 'shortage_cost', 'ordering_cost', 'transport_cost']}
     costs['production_cost'] = sum(row['production'] for row in rows) * config.production_cost
     demand_variance = float(np.var([row['demand'] for row in rows]))

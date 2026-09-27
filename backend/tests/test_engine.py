@@ -8,6 +8,7 @@ from app.game_theory import expected_utility, find_nash_equilibria, inventory_fo
 from app.models import Config
 from app.players import RetailerPlayer
 from app.simulation import generate_demand, simulate
+from app.scenarios import SCENARIOS
 
 
 @pytest.mark.parametrize('distribution', ['normal', 'poisson', 'uniform'])
@@ -34,6 +35,8 @@ def test_physical_and_money_conservation(game_type):
         assert row['total_profit'] == pytest.approx(row['fulfilled'] * c.retail_price - external_cost)
         assert sum(row['posterior']) == pytest.approx(1)
     assert result['summary']['total_profit'] == pytest.approx(sum(r['total_profit'] for r in result['rounds']))
+    average_units = np.mean([sum((row[n]['beginning_inventory'] + row[n]['inventory']) / 2 for n in ['manufacturer', 'supplier', 'retailer']) for row in result['rounds']])
+    assert result['summary']['inventory_turnover'] == pytest.approx(result['summary']['fulfilled'] / average_units)
 
 
 def test_formulas_and_utility():
@@ -87,3 +90,36 @@ def test_comparisons_no_future_leakage_and_zero_demand():
         assert [first[n]['quantity'] for n in ['manufacturer', 'supplier', 'retailer']] == [second[n]['quantity'] for n in ['manufacturer', 'supplier', 'retailer']]
     empty = simulate(Config(demand_mean=0, demand_std=0))['summary']
     assert empty['fill_rate'] == 1 and empty['bullwhip']['production'] is None
+
+
+@pytest.mark.parametrize('scenario', SCENARIOS, ids=lambda s: s['id'])
+def test_scenario_bounds_and_common_demand(scenario):
+    results = [simulate(Config(**scenario['parameters'], game_type=game)) for game in ['baseline', 'repeated', 'bayesian']]
+    assert len({tuple(r['demand'] for r in result['rounds']) for result in results}) == 1
+    for result in results:
+        assert 0 <= result['summary']['fill_rate'] <= 1
+        assert math.isfinite(result['summary']['total_profit'])
+        for row in result['rounds']:
+            assert all(row[n]['inventory'] >= 0 for n in ['manufacturer', 'supplier', 'retailer'])
+            assert row['supplier']['inventory'] <= result['config']['storage_capacity']
+
+
+@pytest.mark.parametrize('distribution', ['normal', 'uniform', 'poisson'])
+def test_belief_likelihoods(distribution):
+    posterior = update_beliefs([0.25, 0.5, 0.25], 135, [65, 100, 135], 10, distribution)
+    assert sum(posterior) == pytest.approx(1)
+    assert posterior[2] > posterior[1] > -1
+    assert posterior[2] > posterior[0]
+
+
+def test_manual_demand_and_capacity_zero():
+    result = simulate(Config(rounds=3, manual_demand=[0, 5, 20], capacity=0, manufacturer_inventory=0, supplier_inventory=0, retailer_inventory=0))
+    assert [r['demand'] for r in result['rounds']] == [0, 5, 20]
+    assert result['summary']['fulfilled'] == 0
+    assert result['summary']['shortage_cost'] == 500
+
+
+def test_approximately_normalized_probabilities():
+    c = Config(priors=[0.25, 0.5, 0.2499999])
+    assert sum(c.priors) == pytest.approx(1, abs=1e-12)
+    assert len(generate_demand(c)) == c.rounds

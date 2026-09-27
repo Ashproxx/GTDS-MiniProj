@@ -56,9 +56,10 @@ def payoff_analysis(config) -> dict:
     matrix = []
     for supply in levels:
         row = []
+        available = min(supply, config.storage_capacity)
         for order in levels:
-            shipped = min(supply, order, config.storage_capacity)
-            supplier = (config.supplier_price - config.transport_cost) * shipped - config.wholesale_price * supply - config.supplier_holding * (supply - shipped) - (config.ordering_cost if supply else 0)
+            shipped = min(available, order)
+            supplier = (config.supplier_price - config.transport_cost) * shipped - config.wholesale_price * available - config.supplier_holding * (available - shipped) - (config.ordering_cost if available else 0)
             retailer = expected_utility(config.priors, [config.retail_price * min(shipped, d) - config.supplier_price * shipped - config.retailer_holding * max(0, shipped - d) - config.shortage_cost * max(0, d - shipped) for d in demands])
             row.append([round(supplier, 2), round(retailer, 2)])
         matrix.append(row)

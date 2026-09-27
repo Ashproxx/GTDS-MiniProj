@@ -47,6 +47,8 @@ class Config(BaseModel):
     def consistent(self):
         if abs(sum(self.priors) - 1) > 1e-6:
             raise ValueError('LOW, MEDIUM and HIGH probabilities must sum to 1.')
+        total = sum(self.priors)
+        self.priors = [p / total for p in self.priors]
         if self.supplier_inventory > self.storage_capacity:
             raise ValueError('Supplier initial inventory exceeds storage capacity.')
         if self.manual_demand and len(self.manual_demand) != self.rounds:

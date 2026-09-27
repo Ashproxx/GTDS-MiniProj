@@ -45,7 +45,7 @@ class Player:
             elif config.mechanism == 'tit_for_tat':
                 action = 'DEFECT' if partner_action == 'DEFECT' else 'COOPERATE'
             else:
-                # One-step incentive versus discounted future coordination surplus.
+                # ponytail: bounded continuation heuristic; use a solved dynamic game for equilibrium claims.
                 margin = max(0, self.price - self.cost)
                 continuation = config.discount * margin * expected / max(0.05, 1 - config.discount)
                 temptation = self.holding * config.safety_stock + margin * self.last_shortage
