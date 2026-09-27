@@ -1,6 +1,7 @@
 import csv
 import io
 import logging
+from datetime import timezone
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def record(row: Simulation, detail=True) -> dict:
     data = row.result if detail else {'config': row.result['config'], 'summary': row.result['summary']}
-    return {**data, 'id': row.id, 'name': row.name, 'created_at': row.created_at.isoformat() + 'Z'}
+    return {**data, 'id': row.id, 'name': row.name, 'created_at': row.created_at.replace(tzinfo=timezone.utc).isoformat()}
 
 
 def save(result: dict) -> dict:
