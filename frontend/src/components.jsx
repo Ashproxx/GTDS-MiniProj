@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowUpRight, Info, Play, Download } from "lucide-react";
-import { download, label, money, number, percent } from "./api";
+import { label, money, number, percent } from "./api";
 
 export const colors = ["#227360", "#f19d54", "#8197c6", "#c95e66"];
 export const players = ["manufacturer", "supplier", "retailer"];
@@ -185,16 +185,9 @@ export function Exports({ result }) {
       <a className="button" href={`/api/simulations/${result.id}/csv`} download>
         <Download size={15} /> CSV
       </a>
-      <button
-        onClick={() =>
-          download(
-            `simulation-${result.id}.json`,
-            JSON.stringify(result, null, 2),
-          )
-        }
-      >
+      <a className="button" href={`/api/simulations/${result.id}`} download={`simulation-${result.id}.json`}>
         JSON
-      </button>
+      </a>
       <a className="button" href="#report">
         Printable report
       </a>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Download, FlaskConical, Play, Trash2 } from "lucide-react";
-import { api, download, label, money, number, percent } from "./api";
+import { api, label, money, number, percent } from "./api";
 import { Chart, Note, Panel } from "./components";
 
 export function Comparison({
@@ -11,6 +11,7 @@ export function Comparison({
   runExperiment,
 }) {
   const [count, setCount] = useState(100);
+  const experimentUrl = experiment ? `/api/experiments/export?request=${encodeURIComponent(JSON.stringify({config: experiment.config, count: experiment.results[0].count}))}` : '';
   const data = results.map((r) => ({
     name: `${label(r.config.game_type)} #${r.id}`,
     ...r.summary,
@@ -198,32 +199,12 @@ export function Comparison({
               </table>
             </div>
             <div className="button-row">
-              <button
-                onClick={() => {
-                  const rows = experiment.results;
-                  const keys = Object.keys(rows[0]);
-                  download(
-                    "experiment-summary.csv",
-                    [
-                      keys.join(","),
-                      ...rows.map((r) => keys.map((k) => r[k]).join(",")),
-                    ].join("\n"),
-                    "text/csv",
-                  );
-                }}
-              >
+              <a className="button" href={`${experimentUrl}&format=csv`} download="experiment-summary.csv">
                 <Download size={15} /> Experiment CSV
-              </button>
-              <button
-                onClick={() =>
-                  download(
-                    "experiment-complete.json",
-                    JSON.stringify(experiment, null, 2),
-                  )
-                }
-              >
+              </a>
+              <a className="button" href={`${experimentUrl}&format=json`} download="experiment-complete.json">
                 Results & parameters JSON
-              </button>
+              </a>
             </div>
           </>
         )}

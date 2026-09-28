@@ -1,12 +1,15 @@
 import csv
 import io
 import logging
+import json
 from datetime import timezone
+from typing import Literal
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import select
+from pydantic import ValidationError
 
 from .database import Session, Simulation
 from .game_theory import find_nash_equilibria
@@ -74,6 +77,19 @@ def experiments(request: ExperimentRequest):
                           **{'average_' + key: float(np.mean([s[key] for s in samples])) for key in metrics[1:]}})
     logger.info('Completed %s paired experiments for each of three models', request.count)
     return {'config': request.config.model_dump(), 'results': summaries}
+
+
+@router.get('/experiments/export')
+def export_experiments(request: str = Query(max_length=10_000), format: Literal['csv', 'json'] = 'csv'):
+    """Regenerate the seeded result for a native browser download, without a batch-history table."""
+    try:
+        parsed = ExperimentRequest.model_validate_json(request)
+    except ValidationError:
+        raise HTTPException(422, 'Invalid experiment export configuration.') from None
+    result = experiments(parsed)
+    if format == 'csv':
+        return csv_response(result['results'], 'experiment-summary.csv')
+    return Response(json.dumps(result), media_type='application/json', headers={'Content-Disposition': 'attachment; filename="experiment-complete.json"'})
 
 
 @router.post('/game/repeated')

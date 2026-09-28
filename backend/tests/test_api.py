@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -64,3 +65,17 @@ def test_nonfinite_and_malformed_inputs_return_validation_errors(client):
     assert 'finite' in response.json()['detail'][0]['msg']
     assert client.post('/api/game/nash', content='{"payoff_matrix":[[[1e309,0]]]}', headers={'Content-Type': 'application/json'}).status_code == 422
     assert client.post('/api/simulations/run', content='broken', headers={'Content-Type': 'application/json'}).status_code == 422
+
+
+def test_experiment_downloads_match_original_results(client):
+    request = {'count': 2, 'config': {'rounds': 3}}
+    original = client.post('/api/experiments', json=request).json()
+    params = {'request': json.dumps(request), 'format': 'csv'}
+    response = client.get('/api/experiments/export', params=params)
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert float(rows[0]['mean_profit']) == original['results'][0]['mean_profit']
+    assert len(rows) == 3
+    params['format'] = 'json'
+    assert client.get('/api/experiments/export', params=params).json() == original
+    assert client.get('/api/experiments/export', params={'request': '{}', 'format': 'xml'}).status_code == 422
+    assert client.get('/api/experiments/export', params={'request': 'invalid'}).status_code == 422
